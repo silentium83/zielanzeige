@@ -20,7 +20,7 @@ void shiftout(uint8_t bit)
 }
 
 uint8_t buffer[120];
-String message = "N\x0f""chster Halt: Kronenplatz";
+String message = "ISO8859-15   9600N1";
 String newMessage;
 int ticks = 0;
 int runde = 120;
