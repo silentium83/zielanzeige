@@ -20,7 +20,7 @@ void shiftout(uint8_t bit)
 }
 
 uint8_t buffer[120];
-String message = "ISO8859-15   9600N1";
+String message = "ISO8859-15   9600N1   https://github.com/silentium83/zielanzeige/tree/develop";
 String newMessage;
 int ticks = 0;
 int runde = 120;
