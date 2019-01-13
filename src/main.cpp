@@ -92,12 +92,18 @@ void loop()
 	ticks++;
 	if (ticks == 8) {
 		ticks = 0;
-		runde--;
+		if ((6 * (int)message.length()) > 120) {
+			runde--;
 
-		letters(runde);
+			letters(runde);
 
-		if (runde == -(6 * (int)message.length())) {
-			runde = 120;
+			if (runde == -(6 * (int)message.length())) {
+				runde = 120;
+			}
+		} else {
+			int padding = (120 - (6 * (int)message.length())) / 2;
+
+			letters(padding);
 		}
 	}
 	receive_serial();
