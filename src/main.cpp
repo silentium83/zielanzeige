@@ -4,91 +4,94 @@
 
 #include "font.h"
 
-const int width = 120;
-const int lines = 7;
+const int WIDTH = 120;
+const int LINES = 7;
+const int LINE_PINS[7] = { 2, 3, 4, 5, 6, 7, 8 };
 
-const int line_pins[7] = { 2, 3, 4, 5, 6, 7, 8 };
+uint8_t buffer[120];
+String message = "9600N1   ISO8859-15   https://github.com/silentium83/zielanzeige/tree/develop";
+String newMessage;
+int ticks = 0;
+int runde = 120;
 
 // Shift register needs to use raw AVR
 // B1 is clock
 // B2 is data
-void shiftout(uint8_t bit)
-{
+void shiftout(uint8_t bit) {
 	PORTB = bit << 2;
 	PORTB |= 0x02;
 	PORTB = 0;
 }
 
-uint8_t buffer[120];
-String message = "ISO8859-15   9600N1   https://github.com/silentium83/zielanzeige/tree/develop";
-String newMessage;
-int ticks = 0;
-int runde = 120;
-
 void write_letter_at(int startcol, uint8_t letter) {
-	for (int8_t x = 0; x < 5; x++) {
-		if (startcol + x >= 0 && startcol + x < width) {
-			buffer[startcol + x] = pgm_read_byte_near(&font_5x7_col[letter][x]);
-		}
-	}
-}
-
-void setup()
-{
-	for (uint8_t i = 2; i <= 10; i++) {
-		pinMode(i, OUTPUT);
-	}
-	pinMode(13, OUTPUT);
-
-	write_letter_at(0,  'H');
-	write_letter_at(6,  'i');
-	write_letter_at(12, '!');
-
-	Serial.begin(9600);
-}
-
-void receive_serial() {
-	if (Serial.available() > 0) {
-		char receivedChar = Serial.read();
-		if (receivedChar == '\n') {
-			if (message != newMessage) {
-				message = newMessage;
-				ticks = 0;
-				runde = 120;
-			}
-			newMessage = "";
-		}
-		else if (receivedChar != '\r') {
-			newMessage += receivedChar;
+	for (int_fast8_t x = 0; x < 5; x++) {
+		int col = startcol + x;
+		if (col >= 0 && col < WIDTH) {
+			buffer[col] = pgm_read_byte(&font_5x7_col[letter][x]);
 		}
 	}
 }
 
 void letters(int round) {
-	for (int i = 0; i < width; i++) {
+	for (int i = 0; i < WIDTH; i++) {
 		buffer[i] = 0;
 	}
 
 	int pos = 0;
-	for (unsigned c = 0; c < message.length(); c++) {
+	for (unsigned int c = 0; c < message.length(); c++) {
 		write_letter_at(round + pos, message[c]);
 		pos += 6;
 	}
 }
 
-void loop()
-{
-	for (uint8_t y = 0; y < lines; y++) {
-		for (uint8_t x = 0; x < width; x++) {
+void receive_serial() {
+	while (Serial.available() > 0) {
+		char receivedChar = Serial.read();
+		switch (receivedChar) {
+			case '\b': // backspace
+				if (newMessage.length() > 0) {
+					newMessage.remove(newMessage.length() - 1);
+				}
+				break;
+			case '\n': // newline
+			case '\r': // carriage return
+				if (newMessage.length() > 0) {
+					if (message != newMessage) {
+						message = newMessage;
+						ticks = 0;
+						runde = 120;
+					}
+					newMessage = "";
+				}
+				break;
+			default:
+				newMessage += receivedChar;
+				break;
+		}
+	}
+}
+
+void setup() {
+	for (uint_fast8_t i = 2; i <= 10; i++) {
+		pinMode(i, OUTPUT);
+	}
+	pinMode(13, OUTPUT);
+
+	Serial.begin(9600);
+}
+
+void loop() {
+	for (uint_fast8_t y = 0; y < LINES; y++) {
+		for (uint_fast8_t x = 0; x < WIDTH; x++) {
 			uint8_t bit = (buffer[x] & (1 << y)) ? 1 : 0;
 			shiftout(bit);
 		}
 
 		digitalWrite(13, 1);
-		digitalWrite(line_pins[y], 1);
+		digitalWrite(LINE_PINS[y], 1);
 		delayMicroseconds(200);
 		digitalWrite(13, 0);
-		digitalWrite(line_pins[y], 0);
+		digitalWrite(LINE_PINS[y], 0);
 	}
 
 	ticks++;
