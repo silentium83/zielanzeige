@@ -19,7 +19,7 @@ int const CHAR_GAP = 1;
 int const LINE_PINS[7] = { 2, 3, 4, 5, 6, 7, 8 };
 
 uint8_t buffer[120];
-String message = "9600N1   ISO8859-15   https://github.com/silentium83/zielanzeige/tree/develop";
+String message = "Infodesk   #GPN19";
 String newMessage;
 int messageLength = pixel_width(message);
 int ticks = 0;
