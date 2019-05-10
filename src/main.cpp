@@ -1,78 +1,116 @@
+#include "font.h"
+
 #include <Arduino.h>
 #include <avr/cpufunc.h>
 #include <avr/pgmspace.h>
 
-#include "font.h"
+#include <limits.h>
+#include <stdint.h>
 
-const int WIDTH = 120;
-const int LINES = 7;
-const int LINE_PINS[7] = { 2, 3, 4, 5, 6, 7, 8 };
+int pixel_width(String const & text);
+void shiftout(uint8_t const bit);
+int write_letter_at(int col, uint8_t const letter);
+void letters(int pos);
+void receive_serial();
+
+int const WIDTH = 120;
+int const LINES = 7;
+int const CHAR_GAP = 1;
+int const LINE_PINS[7] = { 2, 3, 4, 5, 6, 7, 8 };
 
 uint8_t buffer[120];
 String message = "9600N1   ISO8859-15   https://github.com/silentium83/zielanzeige/tree/develop";
 String newMessage;
+int messageLength = pixel_width(message);
 int ticks = 0;
-int runde = 120;
+int turn = 120;
+
+int pixel_width(String const & text) {
+	int width = 0;
+	for (unsigned int i = 0; i < text.length(); ++i) {
+		uint8_t const charWidth = pgm_read_byte(&font_var_width[(uint8_t)(text[i])].width);
+		if (charWidth) {
+			if (width < INT_MAX - CHAR_GAP - charWidth) {
+				width += charWidth + CHAR_GAP;
+			} else {
+				return INT_MAX;
+			}
+		}
+	}
+	width -= CHAR_GAP;
+	if (width < 0) {
+		width = 0;
+	}
+	return width;
+}
 
 // Shift register needs to use raw AVR
 // B1 is clock
 // B2 is data
-void shiftout(uint8_t bit) {
+void shiftout(uint8_t const bit) {
 	PORTB = bit << 2;
 	PORTB |= 0x02;
 	PORTB = 0;
 }
 
-void write_letter_at(int startcol, uint8_t letter) {
-	for (int_fast8_t x = 0; x < 5; x++) {
-		int col = startcol + x;
+int write_letter_at(int col, uint8_t const letter) {
+	uint8_t charWidth = pgm_read_byte(&font_var_width[letter].width);
+	for (int_fast8_t x = 0; x < charWidth; ++x) {
 		if (col >= 0 && col < WIDTH) {
-			buffer[col] = pgm_read_byte(&font_5x7_col[letter][x]);
+			buffer[col] = pgm_read_byte(&font_var_width[letter].columns[x]);
+		} else if (col >= WIDTH) {
+			return col;
 		}
+		++col;
 	}
+	col += CHAR_GAP;
+	return col;
 }
 
-void letters(int round) {
-	for (int i = 0; i < WIDTH; i++) {
+void letters(int pos) {
+	for (int i = 0; i < WIDTH; ++i) {
 		buffer[i] = 0;
 	}
 
-	int pos = 0;
-	for (unsigned int c = 0; c < message.length(); c++) {
-		write_letter_at(round + pos, message[c]);
-		pos += 6;
+	for (unsigned int c = 0; c < message.length() && pos < WIDTH; ++c) {
+		pos = write_letter_at(pos, message[c]);
 	}
 }
 
 void receive_serial() {
 	while (Serial.available() > 0) {
-		char receivedChar = Serial.read();
+		char const receivedChar = Serial.read();
 		switch (receivedChar) {
 			case '\b': // backspace
 				if (newMessage.length() > 0) {
 					newMessage.remove(newMessage.length() - 1);
+					Serial.write("\b ");
 				}
 				break;
 			case '\n': // newline
-			case '\r': // carriage return
 				if (newMessage.length() > 0) {
 					if (message != newMessage) {
 						message = newMessage;
+						messageLength = pixel_width(message);
 						ticks = 0;
-						runde = 120;
+						turn = 120;
 					}
 					newMessage = "";
 				}
+				Serial.print(message);
+				break;
+			case '\r': // carriage return
 				break;
 			default:
 				newMessage += receivedChar;
 				break;
 		}
+		Serial.write(receivedChar);
 	}
 }
 
 void setup() {
-	for (uint_fast8_t i = 2; i <= 10; i++) {
+	for (uint_fast8_t i = 2; i <= 10; ++i) {
 		pinMode(i, OUTPUT);
 	}
 	pinMode(13, OUTPUT);
@@ -81,9 +119,9 @@ void setup() {
 }
 
 void loop() {
-	for (uint_fast8_t y = 0; y < LINES; y++) {
-		for (uint_fast8_t x = 0; x < WIDTH; x++) {
-			uint8_t bit = (buffer[x] & (1 << y)) ? 1 : 0;
+	for (uint_fast8_t y = 0; y < LINES; ++y) {
+		for (uint_fast8_t x = 0; x < WIDTH; ++x) {
+			uint8_t const bit = (buffer[x] & (1 << y)) ? 1 : 0;
 			shiftout(bit);
 		}
 
@@ -94,19 +132,19 @@ void loop() {
 		digitalWrite(LINE_PINS[y], 0);
 	}
 
-	ticks++;
+	++ticks;
 	if (ticks == 8) {
 		ticks = 0;
-		if ((6 * (int)message.length()) > 120) {
-			runde--;
+		if (messageLength > 120) {
+			--turn;
 
-			letters(runde);
+			letters(turn);
 
-			if (runde == -(6 * (int)message.length())) {
-				runde = 120;
+			if (turn == -messageLength) {
+				turn = 120;
 			}
 		} else {
-			int padding = (120 - (6 * (int)message.length())) / 2;
+			int const padding = (120 - messageLength) / 2;
 
 			letters(padding);
 		}
