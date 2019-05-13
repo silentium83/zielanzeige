@@ -9,6 +9,7 @@
 
 int pixel_width(String const & text);
 void shiftout(uint8_t const bit);
+void clear_buffer();
 int write_letter_at(int col, uint8_t const letter);
 void letters(int pos);
 void receive_serial();
@@ -53,6 +54,12 @@ void shiftout(uint8_t const bit) {
 	PORTB = 0;
 }
 
+void clear_buffer() {
+	for (int i = 0; i < WIDTH; ++i) {
+		buffer[i] = 0;
+	}
+}
+
 int write_letter_at(int col, uint8_t const letter) {
 	uint8_t charWidth = pgm_read_byte(&font_var_width[letter].width);
 	for (int_fast8_t x = 0; x < charWidth; ++x) {
@@ -68,9 +75,7 @@ int write_letter_at(int col, uint8_t const letter) {
 }
 
 void letters(int pos) {
-	for (int i = 0; i < WIDTH; ++i) {
-		buffer[i] = 0;
-	}
+	clear_buffer();
 
 	for (unsigned int c = 0; c < message.length() && pos < WIDTH; ++c) {
 		pos = write_letter_at(pos, message[c]);
@@ -133,7 +138,11 @@ void loop() {
 	}
 
 	++ticks;
-	if (ticks == 8) {
+	if (ticks == 6) {
+		if (messageLength > 120) {
+			clear_buffer();
+		}
+	} else if (ticks == 8) {
 		ticks = 0;
 		if (messageLength > 120) {
 			--turn;
