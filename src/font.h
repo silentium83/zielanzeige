@@ -139,8 +139,8 @@ const LCDChar font_var_width[256] PROGMEM = {
 	{ 3, { 0x41, 0x36, 0x08 } },             // 7D }
 	{ 5, { 0x08, 0x10, 0x08, 0x04, 0x08 } }, // 7E ~
 	{ 0, {} }, // 7F DEL
-	{ 0, {} }, // 80 PAD
-	{ 0, {} }, // 81 HOP
+	{ 7, { 0x08, 0x08, 0x08, 0x08, 0x2A, 0x1C, 0x08 } }, // 80 PAD: arrow right
+	{ 7, { 0x08, 0x1C, 0x2A, 0x08, 0x08, 0x08, 0x08 } }, // 81 HOP: arrow left
 	{ 0, {} }, // 82 BPH
 	{ 0, {} }, // 83 NBH
 	{ 0, {} }, // 84 IND
