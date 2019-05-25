@@ -18,6 +18,7 @@ int const WIDTH = 120;
 int const LINES = 7;
 int const CHAR_GAP = 1;
 int const LINE_PINS[7] = { 2, 3, 4, 5, 6, 7, 8 };
+int const LED_PIN = 13;
 
 uint8_t buffer[120];
 String message = "Infodesk   #GPN19";
@@ -118,7 +119,7 @@ void setup() {
 	for (uint_fast8_t i = 2; i <= 10; ++i) {
 		pinMode(i, OUTPUT);
 	}
-	pinMode(13, OUTPUT);
+	pinMode(LED_PIN, OUTPUT);
 
 	Serial.begin(9600);
 }
@@ -130,10 +131,8 @@ void loop() {
 			shiftout(bit);
 		}
 
-		digitalWrite(13, 1);
 		digitalWrite(LINE_PINS[y], 1);
 		delayMicroseconds(200);
-		digitalWrite(13, 0);
 		digitalWrite(LINE_PINS[y], 0);
 	}
 
